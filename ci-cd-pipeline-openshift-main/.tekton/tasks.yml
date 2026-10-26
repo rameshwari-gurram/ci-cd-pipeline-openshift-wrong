@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: cleanup
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: cleanup-generated-files
+      image: alpine:3.20
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        set -eu
+        rm -rf .pytest_cache __pycache__ tests/__pycache__ build dist
+        find . -maxdepth 1 -type d -name '*.egg-info' -exec rm -rf {} +
+        echo "Generated files cleaned"
+
+---
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: nose
+spec:
+  workspaces:
+    - name: source
+  steps:
+    - name: run-unit-tests
+      image: python:3.8
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        set -eu
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+        nosetests -v
